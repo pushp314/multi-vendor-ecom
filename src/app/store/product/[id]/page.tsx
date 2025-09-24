@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -7,6 +7,7 @@ import { Star } from "lucide-react";
 import ReviewForm from "@/components/reviews/review-form";
 import ReviewList from "@/components/reviews/review-list";
 import AddToCartButton from "./add-to-cart-button";
+import {ProductImageCarousel} from "@/components/shared/product-image-carousel";
 
 async function getProductData(id: string, userId?: string) {
   const product = await prisma.product.findUnique({
@@ -78,13 +79,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     <div className="bg-white dark:bg-gray-900">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-          <div className="relative w-full h-[500px] rounded-lg overflow-hidden shadow-xl">
-            <img
-              src={product.images[0]}
-              alt={product.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <ProductImageCarousel images={product.images} title={product.title} />
           <div className="flex flex-col h-full">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Sold by {product.vendor.storeName}</p>

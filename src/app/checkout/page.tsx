@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { getCart } from '@/app/actions/cart';
-import { createCheckoutSession } from '@/app/actions/checkout';
+import { createPaymentIntent } from '@/app/actions/checkout';
 import type { Cart, CartItem, Product } from '@prisma/client';
-import { Button } from '@/components/ui/button';
+import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { toast } from 'sonner';
+import CheckoutForm from '@/components/checkout/checkout-form';
 
 // Define a type for CartItem with the full Product object
 interface CartItemWithProduct extends CartItem {
@@ -23,11 +23,16 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 export default function CheckoutPage() {
   const [cart, setCart] = useState<DetailedCart | null>(null);
   const [loading, setLoading] = useState(true);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
   useEffect(() => {
     getCart()
-      .then(cartData => {
+      .then(async (cartData) => {
         setCart(cartData as DetailedCart | null);
+        if (cartData && cartData.items.length > 0) {
+          const { clientSecret } = await createPaymentIntent();
+          setClientSecret(clientSecret);
+        }
       })
       .finally(() => setLoading(false));
   }, []);
@@ -36,41 +41,30 @@ export default function CheckoutPage() {
   const shipping = 5.00; // Flat rate for now
   const total = subtotal + shipping;
 
-  const handleCheckout = async () => {
-    if (!cart || cart.items.length === 0) {
-      toast.error('Your cart is empty.');
-      return;
-    }
-
-    try {
-      const { sessionId } = await createCheckoutSession();
-      const stripe = await stripePromise;
-      if (stripe) {
-        const { error } = await stripe.redirectToCheckout({ sessionId });
-        if (error) {
-          toast.error(error.message || 'Failed to redirect to checkout.');
-        }
-      }
-    } catch (error) {
-      toast.error('Failed to create checkout session.');
-    }
-  };
-
   if (loading) {
-    return <div>Loading your order...</div>;
+    return <div className="container mx-auto px-4 py-12 text-center">Loading...</div>;
   }
 
   if (!cart || cart.items.length === 0) {
-    return <div>Your cart is empty. <a href="/store">Go shopping!</a></div>;
+    return <div className="container mx-auto px-4 py-12 text-center">Your cart is empty. <a href="/store" className="text-blue-500 hover:underline">Go shopping!</a></div>;
   }
+
+  const appearance = {
+    theme: 'stripe',
+  };
+
+  const options = {
+    clientSecret,
+    appearance,
+  };
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold mb-8">Order Summary</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <h1 className="text-3xl font-bold mb-8 text-center">Checkout</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         <div>
           <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">Your Items</h2>
+            <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between items-center mb-4">
                 <div>
@@ -97,14 +91,11 @@ export default function CheckoutPage() {
           </div>
         </div>
         <div>
-          <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
-            {/* Add shipping form here */}
-            <p className="text-gray-600">Shipping address form will be here.</p>
-          </div>
-          <div className="mt-8">
-            <Button className="w-full" size="lg" onClick={handleCheckout}>Proceed to Payment</Button>
-          </div>
+          {clientSecret && (
+            <Elements options={options} stripe={stripePromise}>
+              <CheckoutForm clientSecret={clientSecret} />
+            </Elements>
+          )}
         </div>
       </div>
     </div>

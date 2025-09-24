@@ -3,10 +3,10 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { stripe } from '@/lib/stripe';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/utils';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-export async function createCheckoutSession() {
+export async function createPaymentIntent() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
@@ -30,33 +30,22 @@ export async function createCheckoutSession() {
     throw new Error('Your cart is empty.');
   }
 
-  const lineItems = cart.items.map(item => ({
-    price_data: {
-      currency: 'usd',
-      product_data: {
-        name: item.product.title,
-        images: item.product.images,
-      },
-      unit_amount: Math.round(item.product.price * 100), // Amount in cents
-    },
-    quantity: item.quantity,
-  }));
+  const subtotal = cart.items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+  const shipping = 5.00; // Flat rate
+  const total = subtotal + shipping;
 
-  const checkoutSession = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    line_items: lineItems,
-    mode: 'payment',
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/cart`,
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: Math.round(total * 100), // Amount in cents
+    currency: 'usd',
     metadata: {
       userId,
       cartId: cart.id,
     },
   });
 
-  if (!checkoutSession.id) {
-    throw new Error('Could not create checkout session');
+  if (!paymentIntent.client_secret) {
+    throw new Error('Could not create Payment Intent');
   }
 
-  return { sessionId: checkoutSession.id };
+  return { clientSecret: paymentIntent.client_secret };
 }
