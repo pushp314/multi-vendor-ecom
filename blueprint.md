@@ -73,3 +73,11 @@ The project follows a standard Next.js App Router structure:
     -   Total Orders
     -   Total Revenue
 -   **Security:** The `getVendorDashboardData` server action ensures that vendors can only view their own dashboard data.
+
+### 9. Modern Home Page Design
+
+-   **Visually Appealing Layout:** A new, modern home page has been implemented with a clean and attractive design to provide a great user experience.
+-   **Hero Section:** A prominent hero section to welcome users and highlight the brand's message.
+-   **New Arrivals:** A dedicated section to showcase the latest products, encouraging users to explore new items.
+-   **Shop by Category:** A section that allows users to easily browse and navigate to different product categories.
+-   **Responsive Design:** The home page is fully responsive and optimized for both desktop and mobile devices.
