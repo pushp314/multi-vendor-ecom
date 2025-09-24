@@ -1,57 +1,21 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { razorpay } from '@/lib/razorpay';
-import { prisma } from '@/lib/prisma';
-import crypto from 'crypto';
+'use server';
 
-export async function POST(req: Request) {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET!;
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyPayment } from '@/app/actions/checkout';
 
-  const shasum = crypto.createHmac('sha256', secret);
-  const body = await req.text();
-  shasum.update(body);
-  const digest = shasum.digest('hex');
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
 
-  if (digest !== req.headers.get('x-razorpay-signature')) {
-    return new Response('Invalid signature', { status: 400 });
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return NextResponse.json({ error: 'Missing Razorpay payment information' }, { status: 400 });
   }
 
-  const event = JSON.parse(body);
-
-  if (event.event === 'payment.captured') {
-    const payment = event.payload.payment.entity;
-    const order = event.payload.order.entity;
-    const { userId, cartId } = order.notes;
-
-    const cart = await prisma.cart.findUnique({
-      where: { id: cartId },
-      include: { items: { include: { product: true } } },
-    });
-
-    if (cart) {
-      await prisma.order.create({
-        data: {
-          userId,
-          items: {
-            create: cart.items.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.product.price,
-            })),
-          },
-          total: cart.items.reduce(
-            (acc, item) => acc + item.product.price * item.quantity,
-            0
-          ),
-          status: 'PAID',
-          razorpayPaymentId: payment.id,
-          razorpayOrderId: order.id,
-          razorpaySignature: payment.signature,
-        },
-      });
-
-      await prisma.cart.delete({ where: { id: cartId } });
-    }
+  try {
+    const { orderId } = await verifyPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+    return NextResponse.json({ orderId });
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
-
-  return new Response(null, { status: 200 });
 }

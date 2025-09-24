@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useCartStore } from '@/store/cart-store';
 import { getCart } from '@/app/actions/cart';
-import { ShoppingBag, User as UserIcon, LogOut, LayoutDashboard } from 'lucide-react';
+import { ShoppingBag, User as UserIcon, LogOut, LayoutDashboard, Package } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,6 +74,12 @@ export default function Header() {
                   <Link href="/profile">
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/orders">
+                    <Package className="mr-2 h-4 w-4" />
+                    <span>My Orders</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => signOut()}>

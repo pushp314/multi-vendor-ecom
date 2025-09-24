@@ -1,24 +1,16 @@
 'use server';
 
-import { z } from 'zod';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { revalidatePath } from 'next/cache';
+import { db } from '@/lib/db';
+import { productSchema } from '@/lib/schemas/product';
+import { getCurrentUser } from '@/lib/session';
 
-const productSchema = z.object({
-  name: z.string().min(3, { message: 'Product name must be at least 3 characters long' }),
-  description: z.string().optional(),
-  price: z.coerce.number().min(0, { message: 'Price must be a positive number' }),
-  imageUrl: z.string().url({ message: 'Please upload an image' }),
-});
+export async function createProduct(formData: FormData) {
+  const user = await getCurrentUser();
 
-export async function addProduct(prevState: any, formData: FormData) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
+  if (!user || user.role !== 'VENDOR') {
     return {
-      errors: { auth: ['You must be logged in to add a product'] },
+      error: 'You must be a vendor to create a product.',
     };
   }
 
@@ -26,7 +18,7 @@ export async function addProduct(prevState: any, formData: FormData) {
     name: formData.get('name'),
     description: formData.get('description'),
     price: formData.get('price'),
-    imageUrl: formData.get('imageUrl'),
+    images: formData.getAll('images'),
   });
 
   if (!validatedFields.success) {
@@ -36,79 +28,105 @@ export async function addProduct(prevState: any, formData: FormData) {
   }
 
   try {
-    const vendor = await prisma.vendor.findUnique({
-      where: { userId: session.user.id },
-    });
-
-    if (!vendor) {
-      return {
-        errors: { vendor: ['You must be a registered vendor to add a product'] },
-      };
-    }
-
-    const product = await prisma.product.create({
+    await db.product.create({
       data: {
-        name: validatedFields.data.name,
-        description: validatedFields.data.description,
-        price: validatedFields.data.price,
-        vendorId: vendor.id,
-        imageUrl: validatedFields.data.imageUrl,
+        vendorId: user.id,
+        ...validatedFields.data,
       },
     });
 
-    revalidatePath('/vendor/dashboard');
-    revalidatePath('/store');
-
-    return { message: `Product '${product.name}' added successfully!` };
-  } catch (error) {
+    revalidatePath('/vendor/products'); // Revalidate the products page
     return {
-      errors: { db: ['Failed to add product'] },
+      message: 'Product created successfully.',
+    };
+  } catch (error) {
+    console.error('Failed to create product:', error);
+    return {
+      error: 'An unexpected error occurred. Please try again.',
+    };
+  }
+}
+
+export async function updateProduct(productId: string, formData: FormData) {
+  const user = await getCurrentUser();
+
+  if (!user || user.role !== 'VENDOR') {
+    return {
+      error: 'You must be a vendor to update a product.',
+    };
+  }
+
+  const validatedFields = productSchema.safeParse({
+    name: formData.get('name'),
+    description: formData.get('description'),
+    price: formData.get('price'),
+    images: formData.getAll('images'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+    };
+  }
+
+  try {
+    const product = await db.product.findUnique({
+      where: { id: productId },
+    });
+
+    if (!product || product.vendorId !== user.id) {
+      return {
+        error: 'Product not found or you do not have permission to update it.',
+      };
+    }
+
+    await db.product.update({
+      where: { id: productId },
+      data: validatedFields.data,
+    });
+
+    revalidatePath('/vendor/products');
+    return {
+      message: 'Product updated successfully.',
+    };
+  } catch (error) {
+    console.error('Failed to update product:', error);
+    return {
+      error: 'An unexpected error occurred. Please try again.',
     };
   }
 }
 
 export async function deleteProduct(productId: string) {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
-  if (!session || !session.user) {
+  if (!user || user.role !== 'VENDOR') {
     return {
-      errors: { auth: ['You must be logged in to delete a product'] },
+      error: 'You must be a vendor to delete a product.',
     };
   }
 
   try {
-    const vendor = await prisma.vendor.findUnique({
-      where: { userId: session.user.id },
-    });
-
-    if (!vendor) {
-      return {
-        errors: { vendor: ['You are not a registered vendor'] },
-      };
-    }
-
-    const product = await prisma.product.findUnique({
+    const product = await db.product.findUnique({
       where: { id: productId },
     });
 
-    if (!product || product.vendorId !== vendor.id) {
+    if (!product || product.vendorId !== user.id) {
       return {
-        errors: { auth: ["You are not authorized to delete this product"] },
+        error: 'Product not found or you do not have permission to delete it.',
       };
     }
 
-    await prisma.product.delete({
-      where: { id: productId },
-    });
+    await db.product.delete({ where: { id: productId } });
 
-    revalidatePath('/vendor/dashboard');
-    revalidatePath('/store');
-
-    return { message: `Product '${product.name}' deleted successfully!` };
-
-  } catch (error) {
+    revalidatePath('/vendor/products');
     return {
-      errors: { db: ['Failed to delete product'] },
+      message: 'Product deleted successfully.',
+    };
+  } catch (error) {
+    console.error('Failed to delete product:', error);
+    return {
+      error: 'An unexpected error occurred. Please try again.',
     };
   }
 }
