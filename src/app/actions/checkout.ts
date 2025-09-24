@@ -2,11 +2,11 @@
 
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import { stripe } from '@/lib/stripe';
-import { prisma } from '@/lib/utils';
+import { razorpay } from '@/lib/razorpay';
+import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-export async function createPaymentIntent() {
+export async function createRazorpayOrder() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
@@ -34,18 +34,24 @@ export async function createPaymentIntent() {
   const shipping = 5.00; // Flat rate
   const total = subtotal + shipping;
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(total * 100), // Amount in cents
-    currency: 'usd',
-    metadata: {
+  const options = {
+    amount: Math.round(total * 100), // amount in the smallest currency unit
+    currency: "USD",
+    receipt: `receipt_order_${new Date().getTime()}`,
+    notes: {
       userId,
       cartId: cart.id,
-    },
-  });
+    }
+  };
 
-  if (!paymentIntent.client_secret) {
-    throw new Error('Could not create Payment Intent');
+  try {
+    const order = await razorpay.orders.create(options);
+    if (!order) {
+        throw new Error("Could not create Razorpay order");
+    }
+    return { order };
+  } catch (error) {
+    console.error(error);
+    throw new Error('Could not create Razorpay order');
   }
-
-  return { clientSecret: paymentIntent.client_secret };
 }

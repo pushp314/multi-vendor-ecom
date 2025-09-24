@@ -1,29 +1,26 @@
-import { stripe } from "@/lib/stripe";
-import { headers } from "next/headers";
-import { buffer } from "micro";
-import { prisma } from "@/lib/utils";
+import { NextApiRequest, NextApiResponse } from 'next';
+import { razorpay } from '@/lib/razorpay';
+import { prisma } from '@/lib/prisma';
+import crypto from 'crypto';
 
 export async function POST(req: Request) {
-  const rawBody = await buffer(req.body);
-  const signature = headers().get("stripe-signature");
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET!;
 
-  let event;
+  const shasum = crypto.createHmac('sha256', secret);
+  const body = await req.text();
+  shasum.update(body);
+  const digest = shasum.digest('hex');
 
-  try {
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    return new Response(`Webhook Error: ${err.message}`, {
-      status: 400,
-    });
+  if (digest !== req.headers.get('x-razorpay-signature')) {
+    return new Response('Invalid signature', { status: 400 });
   }
 
-  if (event.type === "payment_intent.succeeded") {
-    const paymentIntent = event.data.object;
-    const { userId, cartId } = paymentIntent.metadata;
+  const event = JSON.parse(body);
+
+  if (event.event === 'payment.captured') {
+    const payment = event.payload.payment.entity;
+    const order = event.payload.order.entity;
+    const { userId, cartId } = order.notes;
 
     const cart = await prisma.cart.findUnique({
       where: { id: cartId },
@@ -31,7 +28,7 @@ export async function POST(req: Request) {
     });
 
     if (cart) {
-      const order = await prisma.order.create({
+      await prisma.order.create({
         data: {
           userId,
           items: {
@@ -45,7 +42,10 @@ export async function POST(req: Request) {
             (acc, item) => acc + item.product.price * item.quantity,
             0
           ),
-          status: "PAID",
+          status: 'PAID',
+          razorpayPaymentId: payment.id,
+          razorpayOrderId: order.id,
+          razorpaySignature: payment.signature,
         },
       });
 
