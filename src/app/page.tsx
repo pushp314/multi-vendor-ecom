@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { prisma } from "@/lib/utils";
-import { ProductCard } from "@/components/shared/product-card";
+import { prisma } from "@/lib/prisma";
+import ProductCard from "@/components/shared/product-card";
 import {ArrowRight} from "lucide-react";
 
 export default async function HomePage() {
