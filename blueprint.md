@@ -1,83 +1,46 @@
-# Blueprint: E-commerce Platform
+# Blueprint: E-commerce Application
 
 ## Overview
 
-This document outlines the architecture and features of a modern e-commerce platform built with Next.js, `next-auth`, and NeonDB. The platform is designed to be a multi-vendor marketplace, allowing vendors to sign up, manage their own products, and sell to customers. Customers can browse products, manage their profiles, and place orders.
+This document outlines the architecture and features of a modern e-commerce application built with Next.js, Prisma, and Stripe. The application provides a seamless shopping experience, from browsing products to a secure checkout process. It features a robust authentication system, a dynamic shopping cart, and a complete order management system.
 
-## Project Structure
+## Project Outline
 
-The project follows a standard Next.js App Router structure:
+### Authentication
 
--   `/app`: Contains all the routes and UI components for the application.
--   `/components`: Contains reusable UI components.
--   `/lib`: Contains utility functions and the Prisma client instance.
--   `/prisma`: Contains the database schema.
+- **Providers:** Users can sign in using their email and password or through their Google account.
+- **NextAuth.js:** The application uses NextAuth.js for authentication, with a Prisma adapter for database session management.
+- **Protected Routes:** The cart and checkout pages are protected, ensuring that only authenticated users can access them.
 
-## Implemented Features
+### Product Management
 
-### 1. User Authentication with `next-auth`
+- **Prisma Model:** Products are managed through a Prisma `Product` model, which includes fields for name, description, price, and images.
+- **Product Seeding:** The database is seeded with initial product data for immediate use.
+- **Store Page:** Products are displayed on a dedicated store page, where users can browse and add items to their cart.
 
--   **Google OAuth:** Users can sign in using their Google accounts, leveraging the `next-auth` Google Provider.
--   **Session Management:** `next-auth` handles session management, providing session data on both the client and server.
--   **Prisma Adapter:** The `@next-auth/prisma-adapter` is used to store user and session data in the NeonDB database.
+### Shopping Cart
 
-### 2. Address Management (Customer-side)
+- **Dynamic Updates:** The shopping cart is fully dynamic, allowing users to add, remove, and update the quantity of items in real-time.
+- **Server Actions:** Cart operations are handled through Next.js Server Actions, providing a seamless and efficient user experience.
+- **Detailed Summary:** The cart page displays a detailed summary of the items, including the subtotal, shipping costs, and total amount.
 
--   **CRUD Operations:** Customers can create, read, update, and delete their shipping addresses.
--   **Validation:** Address input is validated using a Zod schema to ensure data integrity.
--   **Server Actions:** Address management is handled via Next.js server actions.
+### Checkout
 
-### 3. Product Management (Vendor-side)
+- **Stripe Integration:** The checkout process is powered by Stripe, ensuring secure and reliable payment processing.
+- **Payment Element:** The application uses the Stripe Payment Element for a streamlined and customizable checkout form.
+- **Order Creation:** Upon successful payment, a new order is created in the database, linking the user, products, and payment details.
 
--   **CRUD Operations:** Vendors can create, read, update, and delete their products.
--   **Validation:** Product information is validated using a Zod schema.
--   **Security:** Server actions for product management include checks to ensure that only authenticated vendors can manage their own products.
+### Styling
 
-### 4. Shopping Cart & Checkout
+- **Tailwind CSS:** The application is styled using Tailwind CSS, providing a modern and responsive design.
+- **shadcn/ui:** The UI is enhanced with components from the `shadcn/ui` library, ensuring a consistent and polished look and feel.
 
--   **Cart Management:**
-    -   **Get Cart:** Fetches the user's cart from the database.
-    -   **Add to Cart:** Adds a product to the user's cart. If the item is already in the cart, it increases the quantity.
-    -   **Update Cart Item Quantity:** Allows users to change the quantity of an item in their cart.
-    -   **Remove Cart Item:** Removes an item from the user's cart.
--   **Checkout with Razorpay:**
-    -   **Create Razorpay Order:** Creates a new order with Razorpay, providing the total amount and other necessary details.
-    -   **Verify Payment:** Verifies the payment signature from Razorpay to ensure the transaction is legitimate.
--   **Webhook for Payment Verification:**
-    -   **`/api/webhook/route.ts`:** A dedicated webhook endpoint to receive and process payment confirmations from Razorpay.
+## Initial Development and Error Resolution
 
-### 5. Vendor Order Management
-
--   **View Orders:** Vendors can view a list of orders containing their products on the `/vendor/dashboard/orders` page.
--   **Order Details:** The order list displays key information such as order ID, status, total amount, and date.
--   **Security:** The `getVendorOrders` server action ensures that vendors can only view orders containing their own products.
-
-### 6. Customer Order History
-
--   **View Orders:** Customers can view a list of their past orders on the `/orders` page.
--   **Order Details:** The order list displays key information such as order ID, status, total amount, and date.
--   **Security:** The `getCustomerOrders` server action ensures that customers can only view their own orders.
-
-### 7. Product Reviews
-
--   **Leave a Review:** Customers who have purchased a product can leave a review with a rating and a comment.
--   **View Reviews:** Product reviews are displayed on the product detail page, along with the average rating.
--   **Validation:** Review input is validated to ensure that ratings are between 1 and 5 and that comments are not empty.
--   **Security:** Users must be logged in and have purchased a product to leave a review.
-
-### 8. Vendor Dashboard
-
--   **Dashboard Overview:** A central dashboard for vendors to view key metrics.
--   **Metrics:**
-    -   Total Products
-    -   Total Orders
-    -   Total Revenue
--   **Security:** The `getVendorDashboardData` server action ensures that vendors can only view their own dashboard data.
-
-### 9. Modern Home Page Design
-
--   **Visually Appealing Layout:** A new, modern home page has been implemented with a clean and attractive design to provide a great user experience.
--   **Hero Section:** A prominent hero section to welcome users and highlight the brand's message.
--   **New Arrivals:** A dedicated section to showcase the latest products, encouraging users to explore new items.
--   **Shop by Category:** A section that allows users to easily browse and navigate to different product categories.
--   **Responsive Design:** The home page is fully responsive and optimized for both desktop and mobile devices.
+- **Objective:** The initial goal was to fix a series of errors that were preventing the application from functioning correctly.
+- **Key Issues Resolved:**
+  - **Authentication:** Corrected errors in the NextAuth.js configuration, ensuring that both email/password and Google authentication work as expected.
+  - **Checkout Flow:** Migrated the checkout process from Razorpay to Stripe, implementing a complete and secure payment flow.
+  - **Database Models:** Fixed inconsistencies in the Prisma models, particularly with the `User` and `Product` schemas.
+  - **Cart Functionality:** Built a complete shopping cart experience from the ground up, including components for displaying cart items and a summary of the order.
+- **Outcome:** All identified errors were successfully resolved, resulting in a stable and fully functional e-commerce application.

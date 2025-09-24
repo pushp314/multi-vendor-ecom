@@ -53,7 +53,7 @@ export default function CheckoutPage() {
     theme: 'stripe',
   };
 
-  const options = {
+  const options: any = {
     clientSecret,
     appearance,
   };
@@ -68,7 +68,7 @@ export default function CheckoutPage() {
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between items-center mb-4">
                 <div>
-                  <p className="font-medium">{item.product.title} (x{item.quantity})</p>
+                  <p className="font-medium">{item.product.name} (x{item.quantity})</p>
                   <p className="text-sm text-gray-500">${item.product.price.toFixed(2)} each</p>
                 </div>
                 <p className="font-medium">${(item.product.price * item.quantity).toFixed(2)}</p>
