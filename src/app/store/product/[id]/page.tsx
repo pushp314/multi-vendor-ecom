@@ -8,6 +8,7 @@ import ReviewForm from "@/components/reviews/review-form";
 import ReviewList from "@/components/reviews/review-list";
 import AddToCartButton from "./add-to-cart-button";
 import {ProductImageCarousel} from "@/components/shared/product-image-carousel";
+import Link from "next/link";
 
 async function getProductData(id: string, userId?: string) {
   const product = await prisma.product.findUnique({
@@ -15,6 +16,7 @@ async function getProductData(id: string, userId?: string) {
     include: {
       vendor: {
         select: {
+          id: true,
           storeName: true,
         },
       },
@@ -46,6 +48,7 @@ async function getProductData(id: string, userId?: string) {
     include: {
       vendor: {
         select: {
+          id: true,
           storeName: true,
         },
       },
@@ -82,7 +85,9 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
           <ProductImageCarousel images={product.images} title={product.title} />
           <div className="flex flex-col h-full">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Sold by {product.vendor.storeName}</p>
+            <Link href={`/vendor/${product.vendor.id}`}>
+              <p className="text-sm text-gray-500 dark:text-gray-400 hover:underline">Sold by {product.vendor.storeName}</p>
+            </Link>
               <h1 className="text-5xl font-extrabold tracking-tight mb-3">{product.title}</h1>
               <div className="flex items-center mb-4">
                 <div className="flex items-center">

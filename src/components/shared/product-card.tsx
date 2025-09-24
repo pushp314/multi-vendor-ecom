@@ -15,6 +15,7 @@ interface ProductCardProps {
     images: string[];
     description: string | null;
     vendor: {
+      id: string;
       storeName: string;
     };
     reviews?: {
@@ -47,7 +48,9 @@ export default function ProductCard({ product }: ProductCardProps) {
           />
           <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent text-white">
             <h3 className="font-semibold text-lg truncate">{product.title}</h3>
-            <p className="text-sm">by {product.vendor.storeName}</p>
+            <Link href={`/vendor/${product.vendor.id}`}>
+              <p className="text-sm hover:underline">by {product.vendor.storeName}</p>
+            </Link>
           </div>
         </div>
         <div className="p-4 flex-grow">

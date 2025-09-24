@@ -61,14 +61,12 @@ model Vendor {
 model Category {
   id        String     @id @default(cuid())
   name      String     @unique
-  createdAt DateTime   @default(now())
   products  Product[]
 }
 
 model Product {
   id          String      @id @default(cuid())
   vendorId    String
-  categoryId  String?
   title       String
   description String
   price       Float
@@ -78,13 +76,13 @@ model Product {
   images      String[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-
   vendor      Vendor      @relation(fields: [vendorId], references: [id])
-  category    Category?   @relation(fields: [categoryId], references: [id])
   orderItems  OrderItem[]
   cartItems   CartItem[]
   reviews     Review[]
   inventory   InventoryLog[]
+  categoryId  String?
+  category    Category?   @relation(fields: [categoryId], references: [id])
 }
 
 model Cart {
