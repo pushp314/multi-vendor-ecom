@@ -1,31 +1,19 @@
-'use client';
 
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
+import { authOptions } from './api/auth/[...nextauth]/route';
+import SignOut from './components/SignOut';
+import SignIn from './components/SignIn';
 
 export default async function Home() {
-  const { data: session } = useSession();
+  const session = await getServerSession(authOptions);
   const products = await prisma.product.findMany();
 
   return (
     <div>
       <div className="flex justify-end mb-4">
-        {session ? (
-          <button
-            onClick={() => signOut()}
-            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
-          >
-            Sign out
-          </button>
-        ) : (
-          <button
-            onClick={() => signIn('google')}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-          >
-            Sign in with Google
-          </button>
-        )}
+        {session ? <SignOut /> : <SignIn />}
       </div>
       <h1 className="text-3xl font-bold mb-8">Our Products</h1>
       {products.length === 0 ? (
