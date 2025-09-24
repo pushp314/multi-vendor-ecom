@@ -5,6 +5,10 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding the database...');
 
+  // Delete all existing data
+  await prisma.product.deleteMany({});
+  await prisma.user.deleteMany({});
+
   // Create a vendor user
   const vendor = await prisma.user.create({
     data: {
