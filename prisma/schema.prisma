@@ -110,9 +110,11 @@ model Order {
   total             Float
   status            OrderStatus @default(PENDING)
   createdAt         DateTime    @default(now())
-  stripeSessionId   String?     @unique
   shippingAddressId String?
   billingAddressId  String?
+  razorpayPaymentId String?
+  razorpayOrderId   String?
+  razorpaySignature String?
 
   user              User        @relation(fields: [userId], references: [id])
   items             OrderItem[]
